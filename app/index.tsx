@@ -1,7 +1,6 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { Link } from "expo-router";
-import "nativewind";
-
+import React from "react";
 export default function Index() {
   return (
     <View className="flex-1 bg-[#E1EEBC] p-5 justify-center">

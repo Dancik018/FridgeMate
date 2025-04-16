@@ -1,11 +1,12 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, SafeAreaView } from 'react-native';
 import { useState, useEffect } from 'react';
-
+import React from 'react';
 interface Product {
   id: number;
   name: string;
   selected: boolean;
   image?: string;
+  aisle?: string;
 }
 
 interface Category {
@@ -14,7 +15,7 @@ interface Category {
   query: string;
 }
 
-const API_KEY = '39c39847a9754980bc6409c0e1e0eda8';
+const API_KEY = 'f5b88934464f4c2f8c6c1b6c64e00270';
 
 const CATEGORIES: Category[] = [
   { id: 'all', name: 'All', query: 'food' },
@@ -31,6 +32,8 @@ export default function Main() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category>(CATEGORIES[0]);
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 
   const fetchWithTimeout = async (url: string, options = {}, timeout = 10000) => {
     const controller = new AbortController();
@@ -57,7 +60,6 @@ export default function Main() {
     setError(null);
     try {
       if (category.id === 'all') {
-        // Fetch products from all categories
         const allProductsPromises = CATEGORIES.filter(cat => cat.id !== 'all').map(cat =>
           fetchWithTimeout(
             `https://api.spoonacular.com/food/ingredients/search?query=${encodeURIComponent(cat.query)}&number=10&apiKey=${API_KEY}&category=${encodeURIComponent(cat.query)}`,
@@ -78,6 +80,7 @@ export default function Main() {
             name: item.name,
             selected: false,
             image: item.image ? `https://spoonacular.com/cdn/ingredients_100x100/${item.image}` : undefined,
+            aisle: item.aisle,
           }))
         );
 
@@ -109,6 +112,7 @@ export default function Main() {
           name: item.name,
           selected: false,
           image: item.image ? `https://spoonacular.com/cdn/ingredients_100x100/${item.image}` : undefined,
+          aisle: item.aisle,
         }));
         
         setProducts(formattedProducts);
@@ -128,7 +132,7 @@ export default function Main() {
       setLoading(true);
       setError(null);
       try {
-        let url = `https://api.spoonacular.com/food/ingredients/search?query=${encodeURIComponent(query)}&number=50&apiKey=${API_KEY}`;
+        let url = `https://api.spoonacular.com/food/ingredients/search?query=${encodeURIComponent(query)}&number=20&apiKey=${API_KEY}`;
         
         if (selectedCategory.id !== 'all') {
           url += `&category=${encodeURIComponent(selectedCategory.query)}`;
@@ -155,18 +159,30 @@ export default function Main() {
           throw new Error('Invalid API response format');
         }
 
-        const searchResults = data.results.map((item: any) => ({
-          id: `${item.id}-search-${selectedCategory.id}`,
-          name: item.name,
-          selected: false,
-          image: item.image ? `https://spoonacular.com/cdn/ingredients_100x100/${item.image}` : undefined,
-        }));
+        const searchResults = data.results.map((item: any) => {
+          const existingProduct = selectedProducts.find(p => p.name.toLowerCase() === item.name.toLowerCase());
+          return {
+            id: `${item.id}-search-${selectedCategory.id}`,
+            name: item.name,
+            selected: existingProduct ? true : false,
+            image: item.image ? `https://spoonacular.com/cdn/ingredients_100x100/${item.image}` : undefined,
+            aisle: item.aisle,
+          };
+        });
+
+        const selectedProductsNotInSearch = selectedProducts.filter(
+          selectedProduct => !searchResults.some(
+            (searchResult: Product) => searchResult.name.toLowerCase() === selectedProduct.name.toLowerCase()
+          )
+        );
+
+        const combinedProducts = [...searchResults, ...selectedProductsNotInSearch];
         
-        setProducts(searchResults);
+        setProducts(combinedProducts);
         setError(null);
       } catch (error) {
         console.error('Error searching products:', error);
-        setError(error instanceof Error ? error.message : 'Failed to search products. Please check your internet connection.');
+        setError(error instanceof Error ? error.message : 'Nu s-au putut încărca produsele. Vă rugăm să încercați mai târziu.');
         setProducts([]);
       } finally {
         setLoading(false);
@@ -177,9 +193,11 @@ export default function Main() {
   };
 
   const toggleProduct = (id: number) => {
-    setProducts(products.map(product => 
+    const updatedProducts = products.map(product => 
       product.id === id ? { ...product, selected: !product.selected } : product
-    ));
+    );
+    setProducts(updatedProducts);
+    setSelectedProducts(updatedProducts.filter(product => product.selected));
   };
 
   const retryFetch = () => {
@@ -190,10 +208,16 @@ export default function Main() {
     }
   };
 
+  const hasSelectedProducts = selectedProducts.length > 0;
+
+  const filteredProducts = showSelectedOnly 
+    ? selectedProducts
+    : products;
+
   return (
     <SafeAreaView className="flex-1 bg-[#F3F4F6]">
       <View className="px-4 py-3 bg-white shadow-sm">
-        <Text className="text-2xl font-bold mb-3 text-[#1F2937]">Fridge-Mate</Text>
+        <Text className="text-2xl font-bold mb-3 text-[#328E6E]">Fridge-Mate</Text>
         <TextInput
           className="bg-[#F9FAFB] px-4 py-2 rounded-lg border border-[#E5E7EB] text-[#374151] mb-3"
           placeholder="Search for ingredients..."
@@ -214,7 +238,7 @@ export default function Main() {
               key={category.id}
               className={`px-4 py-2 rounded-full mr-2 ${
                 selectedCategory.id === category.id
-                  ? 'bg-[#10B981]'
+                  ? 'bg-[#90C67C]'
                   : 'bg-[#E5E7EB]'
               }`}
               onPress={() => {
@@ -225,7 +249,7 @@ export default function Main() {
               <Text
                 className={`text-sm font-medium ${
                   selectedCategory.id === category.id
-                    ? 'text-white'
+                    ? 'text-[#E1EEBC]'
                     : 'text-[#374151]'
                 }`}
               >
@@ -236,9 +260,9 @@ export default function Main() {
         </ScrollView>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 80 }}>
         {loading ? (
-          <Text className="p-5 text-center text-[#6B7280]">
+          <Text className="p-5 text-center text-[#67AE6E]">
             Loading products...
           </Text>
         ) : error ? (
@@ -247,19 +271,19 @@ export default function Main() {
               {error}
             </Text>
             <TouchableOpacity
-              className="bg-[#10B981] py-3 px-4 rounded-lg active:bg-[#059669]"
+              className="bg-[#90C67C] py-3 px-4 rounded-lg active:bg-[#67AE6E]"
               onPress={retryFetch}
             >
-              <Text className="text-white text-center font-medium">Retry</Text>
+              <Text className="text-[#E1EEBC] text-center font-medium">Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : products.length === 0 ? (
-          <Text className="p-5 text-center text-[#6B7280]">
-            No products found
+        ) : filteredProducts.length === 0 ? (
+          <Text className="p-5 text-center text-[#67AE6E]">
+            {showSelectedOnly ? 'No selected products' : 'No products found'}
           </Text>
         ) : (
           <View className="px-4">
-            {products.map((product: Product) => (
+            {filteredProducts.map((product: Product) => (
               <TouchableOpacity
                 key={product.id}
                 className="flex-row items-center py-3 border-b border-[#E5E7EB]"
@@ -273,18 +297,25 @@ export default function Main() {
                       style={{ backgroundColor: '#F3F4F6' }}
                     />
                   )}
-                  <Text className="flex-1 text-base font-medium capitalize text-[#374151]">
-                    {product.name}
-                  </Text>
+                  <View className="flex-1">
+                    <Text className="text-base font-medium capitalize text-[#328E6E]">
+                      {product.name}
+                    </Text>
+                    {product.aisle && (
+                      <Text className="text-sm text-[#67AE6E]">
+                        {product.aisle}
+                      </Text>
+                    )}
+                  </View>
                   <View 
                     className={`w-6 h-6 rounded-md justify-center items-center ${
                       product.selected 
-                        ? 'bg-[#10B981]' 
+                        ? 'bg-[#90C67C]' 
                         : 'bg-white border-2 border-[#D1D5DB]'
                     }`}
                   >
                     {product.selected && (
-                      <Text className="text-white text-sm">✓</Text>
+                      <Text className="text-[#E1EEBC] text-sm">✓</Text>
                     )}
                   </View>
                 </View>
@@ -293,6 +324,43 @@ export default function Main() {
           </View>
         )}
       </ScrollView>
+
+      <View className="absolute bottom-0 left-0 right-0 bg-white p-4 shadow-lg">
+        <View className="flex-row justify-between space-x-2">
+          {hasSelectedProducts && !showSelectedOnly && (
+            <TouchableOpacity
+              className="flex-1 bg-[#90C67C] py-3 px-4 rounded-lg active:bg-[#67AE6E]"
+              onPress={() => setShowSelectedOnly(!showSelectedOnly)}
+            >
+              <Text className="text-[#E1EEBC] text-center font-medium">
+                To Prepare ({selectedProducts.length})
+              </Text>
+            </TouchableOpacity>
+          )}
+          {showSelectedOnly && (
+            <>
+              <TouchableOpacity
+                className="flex-1 bg-[#90C67C] py-3 px-4 rounded-lg active:bg-[#67AE6E]"
+                onPress={() => setShowSelectedOnly(!showSelectedOnly)}
+              >
+                <Text className="text-[#E1EEBC] text-center font-medium">
+                  Show All Products
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 bg-[#328E6E] py-3 px-4 rounded-lg active:bg-[#67AE6E]"
+                onPress={() => {
+                  console.log('Navigate to recipes page');
+                }}
+              >
+                <Text className="text-[#E1EEBC] text-center font-medium">
+                  Prepare!!
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
