@@ -1,6 +1,8 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, SafeAreaView } from 'react-native';
 import { useState, useEffect } from 'react';
 import React from 'react';
+import { Link, useRouter } from 'expo-router';
+
 interface Product {
   id: number;
   name: string;
@@ -15,7 +17,7 @@ interface Category {
   query: string;
 }
 
-const API_KEY = 'f5b88934464f4c2f8c6c1b6c64e00270';
+const API_KEY = '6e2dfe289f3944549989ab065c7f8a90';
 
 const CATEGORIES: Category[] = [
   { id: 'all', name: 'All', query: 'food' },
@@ -27,6 +29,7 @@ const CATEGORIES: Category[] = [
 ];
 
 export default function Main() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -344,17 +347,21 @@ export default function Main() {
                 onPress={() => setShowSelectedOnly(!showSelectedOnly)}
               >
                 <Text className="text-[#E1EEBC] text-center font-medium">
-                  Show All Products
+                  Add more products
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 bg-[#328E6E] py-3 px-4 rounded-lg active:bg-[#67AE6E]"
                 onPress={() => {
-                  console.log('Navigate to recipes page');
+                  const selectedIngredients = selectedProducts.map(p => p.name).join(',');
+                  router.push({
+                    pathname: '/recete',
+                    params: { ingredients: selectedIngredients }
+                  });
                 }}
               >
                 <Text className="text-[#E1EEBC] text-center font-medium">
-                  Prepare!!
+                  Let's Prepare!!
                 </Text>
               </TouchableOpacity>
             </>
