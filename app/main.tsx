@@ -17,7 +17,7 @@ interface Category {
   query: string;
 }
 
-const API_KEY = '6e2dfe289f3944549989ab065c7f8a90';
+const API_KEY = 'b2cb9532c8b847d6a434112e34a4c0ae';
 
 const CATEGORIES: Category[] = [
   { id: 'all', name: 'All', query: 'food' },
@@ -78,16 +78,26 @@ export default function Main() {
 
         const results = await Promise.all(allProductsPromises);
         const allProducts = results.flatMap((data, categoryIndex) => 
-          data.results.map((item: any) => ({
-            id: `${item.id}-${categoryIndex}`,
-            name: item.name,
-            selected: false,
-            image: item.image ? `https://spoonacular.com/cdn/ingredients_100x100/${item.image}` : undefined,
-            aisle: item.aisle,
-          }))
+          data.results.map((item: any) => {
+            const existingProduct = selectedProducts.find(p => p.name.toLowerCase() === item.name.toLowerCase());
+            return {
+              id: `${item.id}-${categoryIndex}`,
+              name: item.name,
+              selected: existingProduct ? true : false,
+              image: item.image ? `https://spoonacular.com/cdn/ingredients_100x100/${item.image}` : undefined,
+              aisle: item.aisle,
+            };
+          })
         );
 
-        setProducts(allProducts);
+        const selectedProductsNotInCategory = selectedProducts.filter(
+          selectedProduct => !allProducts.some(
+            (product: Product) => product.name.toLowerCase() === selectedProduct.name.toLowerCase()
+          )
+        );
+
+        const combinedProducts = [...allProducts, ...selectedProductsNotInCategory];
+        setProducts(combinedProducts);
       } else {
         const response = await fetchWithTimeout(
           `https://api.spoonacular.com/food/ingredients/search?query=${encodeURIComponent(category.query)}&number=50&apiKey=${API_KEY}&category=${encodeURIComponent(category.query)}`,
@@ -110,15 +120,25 @@ export default function Main() {
           throw new Error('Invalid API response format');
         }
 
-        const formattedProducts = data.results.map((item: any) => ({
-          id: `${item.id}-${category.id}`,
-          name: item.name,
-          selected: false,
-          image: item.image ? `https://spoonacular.com/cdn/ingredients_100x100/${item.image}` : undefined,
-          aisle: item.aisle,
-        }));
-        
-        setProducts(formattedProducts);
+        const formattedProducts = data.results.map((item: any) => {
+          const existingProduct = selectedProducts.find(p => p.name.toLowerCase() === item.name.toLowerCase());
+          return {
+            id: `${item.id}-${category.id}`,
+            name: item.name,
+            selected: existingProduct ? true : false,
+            image: item.image ? `https://spoonacular.com/cdn/ingredients_100x100/${item.image}` : undefined,
+            aisle: item.aisle,
+          };
+        });
+
+        const selectedProductsNotInCategory = selectedProducts.filter(
+          selectedProduct => !formattedProducts.some(
+            (product: Product) => product.name.toLowerCase() === selectedProduct.name.toLowerCase()
+          )
+        );
+
+        const combinedProducts = [...formattedProducts, ...selectedProductsNotInCategory];
+        setProducts(combinedProducts);
       }
       setError(null);
     } catch (error) {
@@ -185,7 +205,7 @@ export default function Main() {
         setError(null);
       } catch (error) {
         console.error('Error searching products:', error);
-        setError(error instanceof Error ? error.message : 'Nu s-au putut încărca produsele. Vă rugăm să încercați mai târziu.');
+        setError(error instanceof Error ? error.message : 'Unable to load products. Please try again later.');
         setProducts([]);
       } finally {
         setLoading(false);

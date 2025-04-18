@@ -12,7 +12,7 @@ interface Recipe {
   ingredients: any[];
 }
 
-const API_KEY = '6e2dfe289f3944549989ab065c7f8a90';
+const API_KEY = 'b2cb9532c8b847d6a434112e34a4c0ae';
 
 export default function Recete() {
   const router = useRouter();
@@ -83,7 +83,7 @@ export default function Recete() {
       setError(null);
     } catch (error) {
       console.error('Error fetching recipes:', error);
-      setError(error instanceof Error ? error.message : 'Nu s-au putut încărca rețetele. Vă rugăm să încercați mai târziu.');
+      setError(error instanceof Error ? error.message : 'Unable to load recipes. Please try again later.');
       setRecipes([]);
     } finally {
       setLoading(false);
@@ -94,19 +94,19 @@ export default function Recete() {
     <SafeAreaView className="flex-1 bg-[#F3F4F6]">
       <View className="px-4 py-3 bg-white shadow-sm">
         <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-[#328E6E]">Rețete</Text>
+          <Text className="text-2xl font-bold text-[#328E6E]">Recipes</Text>
           <TouchableOpacity
             className="bg-[#90C67C] py-2 px-4 rounded-lg active:bg-[#67AE6E]"
             onPress={() => router.back()}
           >
-            <Text className="text-[#E1EEBC] font-medium">Înapoi</Text>
+            <Text className="text-[#E1EEBC] font-medium">Back</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
         {loading ? (
-          <Text className="text-center text-[#67AE6E]">Se încarcă rețetele...</Text>
+          <Text className="text-center text-[#67AE6E]">Loading recipes...</Text>
         ) : error ? (
           <View className="items-center">
             <Text className="text-center text-[#EF4444] mb-4">{error}</Text>
@@ -114,19 +114,22 @@ export default function Recete() {
               className="bg-[#90C67C] py-3 px-4 rounded-lg active:bg-[#67AE6E]"
               onPress={() => fetchRecipes(params.ingredients as string)}
             >
-              <Text className="text-[#E1EEBC] text-center font-medium">Încearcă din nou</Text>
+              <Text className="text-[#E1EEBC] text-center font-medium">Try again</Text>
             </TouchableOpacity>
           </View>
         ) : recipes.length === 0 ? (
-          <Text className="text-center text-[#67AE6E]">Nu s-au găsit rețete pentru ingredientele selectate</Text>
+          <Text className="text-center text-[#67AE6E]">No recipes found for the selected ingredients.</Text>
         ) : (
-          <View className="space-y-6">
-            {recipes.map((recipe) => (
-              <View key={recipe.id} className="border-b border-[#E5E7EB] pb-6">
+          <View className="space-y-4">
+            {recipes.map((recipe, index) => (
+              <View key={recipe.id}>
                 <TouchableOpacity
                   className="bg-white rounded-lg shadow-sm overflow-hidden"
                   onPress={() => {
-                    console.log('Navigate to recipe details:', recipe.id);
+                    router.push({
+                      pathname: '/[id]',
+                      params: { id: recipe.id }
+                    });
                   }}
                 >
                   <Image
@@ -140,14 +143,17 @@ export default function Recete() {
                     </Text>
                     <View className="flex-row justify-between">
                       <Text className="text-[#67AE6E]">
-                        {recipe.readyInMinutes} minute
+                        {recipe.readyInMinutes} minutes
                       </Text>
                       <Text className="text-[#67AE6E]">
-                        {recipe.servings} porții
+                        {recipe.servings} portions
                       </Text>
                     </View>
                   </View>
                 </TouchableOpacity>
+                {index < recipes.length - 1 && (
+                  <View className="h-4 border-b border-[#E5E7EB] my-2" />
+                )}
               </View>
             ))}
           </View>
